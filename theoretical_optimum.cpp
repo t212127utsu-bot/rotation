@@ -201,7 +201,7 @@ void run_simulation(int K, int M, string name) {
 
 int main() {
     // 任意のK次元を指定して実行
-    int K = 2; 
+    int K = 3; 
     
     run_simulation(K, 2, "BPSK");
     run_simulation(K, 4, "16QAM");
