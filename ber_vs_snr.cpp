@@ -109,14 +109,13 @@ void run_snr_simulation(int K, int M, string name, double opt_angle_deg) {
     vector<int> current_v(K, 0);
     build_vectors(0, K, M, N_vals, D_vals, current_v, valid_vectors);
     
-    string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\SNR_vs_BER_K" + to_string(K) + "_" + name + ".csv";
+    string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\ber_eb\\SNR_vs_BER_K" + to_string(K) + "_" + name + ".csv";
     ofstream out(filepath);
-    out << "SNR(dB),BER_Unrotated(0deg),BER_SSD(" << opt_angle_deg << "deg)\n";
+    out << "SNR(dB),BER\n";
     
     // 回転行列の準備
     double th_ssd = opt_angle_deg * M_PI / 180.0;
     vector<vector<double>> R_ssd = get_rotation_matrix(K, th_ssd);
-    vector<vector<double>> R_unrot = get_rotation_matrix(K, 0.0);
     
     // SNRを0dBから40dBまで1dB刻みでループ
     for (double snr_db = 0; snr_db <= 40.0; snr_db += 1.0) {
@@ -124,7 +123,6 @@ void run_snr_simulation(int K, int M, string name, double opt_angle_deg) {
         double c_val = (M * M - 1.0) / (3.0 * log2(M) * snr_linear);
         
         double exact_ber_sum_ssd = 0;
-        double exact_ber_sum_unrot = 0;
         
         for (const auto& dv : valid_vectors) {
             // SSD (Rotated)
@@ -136,43 +134,27 @@ void run_snr_simulation(int K, int M, string name, double opt_angle_deg) {
                 }
                 G2_ssd[k] = rk * rk;
             }
-            // Unrotated
-            vector<double> G2_unrot(K, 0.0);
-            for (int k = 0; k < K; ++k) {
-                double rk = 0;
-                for (int j = 0; j < K; ++j) {
-                    rk += R_unrot[k][j] * dv.v[j];
-                }
-                G2_unrot[k] = rk * rk;
-            }
             
             int steps = 40;
             double dphi = (M_PI / 2.0) / steps;
             double integral_ssd = 0.0;
-            double integral_unrot = 0.0;
             for (int i = 1; i <= steps; ++i) {
                 double phi = (i - 0.5) * dphi;
                 double sin2_phi = sin(phi) * sin(phi);
                 
                 double prod_ssd = 1.0;
-                double prod_unrot = 1.0;
                 for (int k = 0; k < K; ++k) {
                     prod_ssd *= sin2_phi / (sin2_phi + G2_ssd[k] / c_val);
-                    prod_unrot *= sin2_phi / (sin2_phi + G2_unrot[k] / c_val);
                 }
                 integral_ssd += prod_ssd;
-                integral_unrot += prod_unrot;
             }
             
             exact_ber_sum_ssd += dv.kappa * (integral_ssd * dphi / M_PI);
-            exact_ber_sum_unrot += dv.kappa * (integral_unrot * dphi / M_PI);
         }
         
         double BER_bound_ssd = exact_ber_sum_ssd / pow(M, K);
-        double BER_bound_unrot = exact_ber_sum_unrot / pow(M, K);
         out << fixed << setprecision(1) << snr_db << "," 
-            << scientific << setprecision(8) << BER_bound_unrot << "," 
-            << BER_bound_ssd << "\n";
+            << scientific << setprecision(8) << BER_bound_ssd << "\n";
     }
     
     out.close();
