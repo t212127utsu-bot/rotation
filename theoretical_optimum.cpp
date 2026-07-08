@@ -22,6 +22,18 @@ int gray_code(int m, int M) {
     else return half + gray_code(M - 1 - m, half);
 }
 
+// 組み合わせ nCr の計算
+long long nCr(int n, int r) {
+    if (r > n) return 0;
+    if (r == 0 || r == n) return 1;
+    if (r > n / 2) r = n - r;
+    long long res = 1;
+    for (int i = 1; i <= r; ++i) {
+        res = res * (n - i + 1) / i;
+    }
+    return res;
+}
+
 // 事前計算した差分ベクトルと重み
 struct DiffVector {
     vector<double> v;
@@ -98,6 +110,12 @@ vector<vector<double>> get_rotation_matrix(int K, double theta) {
 void run_simulation(int K, int M, string name) {
     cout << "Starting simulation for K=" << K << ", " << name << " (M=" << M << ")..." << endl;
     
+    // 式(70)のBER変換用のスケーリング係数を計算 (Eb/N0 = 30dB)
+    double snr_db = 30.0;
+    double snr_linear = pow(10.0, snr_db / 10.0);
+    double coeff_base = (M * M - 1.0) / (12.0 * M * log2(M) * snr_linear);
+    double scaling_factor = pow(coeff_base, K) * nCr(2 * K, K);
+    
     // 1次元ごとの出現数(N)とハミング距離和(D)を事前計算
     vector<int> N_vals(2 * M - 1, 0);
     vector<int> D_vals(2 * M - 1, 0);
@@ -116,9 +134,9 @@ void run_simulation(int K, int M, string name) {
     
     string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\K" + to_string(K) + "_" + name + ".csv";
     ofstream out(filepath);
-    out << "Angle(deg),f(R)\n";
+    out << "Angle(deg),BER_Bound_Eq70\n";
     
-    double min_fR = 1e30;
+    double min_BER = 1e30;
     double opt_angle = 0;
     
     for (double deg = 0; deg <= 45.0001; deg += 0.01) {
@@ -145,10 +163,12 @@ void run_simulation(int K, int M, string name) {
             }
         }
         
-        out << fixed << setprecision(2) << deg << "," << scientific << setprecision(8) << fR << "\n";
+        double BER_bound = (fR >= 1e30) ? 1e30 : fR * scaling_factor;
+        
+        out << fixed << setprecision(2) << deg << "," << scientific << setprecision(8) << BER_bound << "\n";
             
-        if (fR < min_fR) {
-            min_fR = fR;
+        if (BER_bound < min_BER) {
+            min_BER = BER_bound;
             opt_angle = deg;
         }
     }
