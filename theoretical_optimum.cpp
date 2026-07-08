@@ -133,9 +133,10 @@ void run_simulation(int K, int M, string name) {
     
     string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\K" + to_string(K) + "_" + name + ".csv";
     ofstream out(filepath);
-    out << "Angle(deg),BER_Bound_Exact_Integral\n";
+    // CSV出力は以前と同様に2列のみとする
+    out << "Angle(deg),BER\n";
     
-    double min_BER = 1e30;
+    double min_fR = 1e30;
     double opt_angle = 0;
     
     for (double deg = 0; deg <= 45.0001; deg += 0.01) {
@@ -143,17 +144,28 @@ void run_simulation(int K, int M, string name) {
         vector<vector<double>> R = get_rotation_matrix(K, th);
         
         double exact_ber_sum = 0;
+        double fR = 0; // 最適化指標 f(R) 式(71)
+        
         for (const auto& dv : valid_vectors) {
             vector<double> G2(K, 0.0);
+            double P = 1.0;
             for (int k = 0; k < K; ++k) {
                 double rk = 0;
                 for (int j = 0; j < K; ++j) {
                     rk += R[k][j] * dv.v[j];
                 }
                 G2[k] = rk * rk;
+                P *= G2[k];
             }
             
-            // Craigの公式の数値積分（式48の特異点を回避した厳密な同値式）
+            // 最適角の判定用 f(R) の計算式(71) 
+            if (P < 1e-15) {
+                fR += 1e30; 
+            } else {
+                fR += dv.kappa / P;
+            }
+            
+            // グラフ出力用 BER の計算式(48相当)
             int steps = 40;
             double dphi = (M_PI / 2.0) / steps;
             double integral = 0.0;
@@ -173,16 +185,18 @@ void run_simulation(int K, int M, string name) {
         // M^K で割って最終的なBER上界値とする（式45に基づく）
         double BER_bound = exact_ber_sum / pow(M, K);
         
+        // CSV出力（2列のみ）
         out << fixed << setprecision(2) << deg << "," << scientific << setprecision(8) << BER_bound << "\n";
             
-        if (BER_bound < min_BER) {
-            min_BER = BER_bound;
+        // 最適角の判定基準は式(71)のf(R)を使用する
+        if (fR < min_fR) {
+            min_fR = fR;
             opt_angle = deg;
         }
     }
     
     out.close();
-    cout << "Finished K=" << K << " " << name << ". Optimal Angle: " << fixed << setprecision(2) << opt_angle << " deg" << endl;
+    cout << "Finished K=" << K << " " << name << ". Optimal Angle (by Eq71): " << fixed << setprecision(2) << opt_angle << " deg" << endl;
 }
 
 int main() {
