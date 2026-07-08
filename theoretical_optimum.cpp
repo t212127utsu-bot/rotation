@@ -110,11 +110,10 @@ vector<vector<double>> get_rotation_matrix(int K, double theta) {
 void run_simulation(int K, int M, string name) {
     cout << "Starting simulation for K=" << K << ", " << name << " (M=" << M << ")..." << endl;
     
-    // 式(70)のBER変換用のスケーリング係数を計算 (Eb/N0 = 30dB)
+    // 式(48)のルート内と同じ SNR由来の定数 c_val を計算 (Eb/N0 = 30dB)
     double snr_db = 30.0;
     double snr_linear = pow(10.0, snr_db / 10.0);
-    double coeff_base = (M * M - 1.0) / (12.0 * M * log2(M) * snr_linear);
-    double scaling_factor = pow(coeff_base, K) * nCr(2 * K, K);
+    double c_val = (M * M - 1.0) / (3.0 * log2(M) * snr_linear);
     
     // 1次元ごとの出現数(N)とハミング距離和(D)を事前計算
     vector<int> N_vals(2 * M - 1, 0);
@@ -134,7 +133,7 @@ void run_simulation(int K, int M, string name) {
     
     string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\K" + to_string(K) + "_" + name + ".csv";
     ofstream out(filepath);
-    out << "Angle(deg),BER_Bound_Eq70\n";
+    out << "Angle(deg),BER_Bound_Exact_Integral\n";
     
     double min_BER = 1e30;
     double opt_angle = 0;
@@ -143,27 +142,36 @@ void run_simulation(int K, int M, string name) {
         double th = deg * M_PI / 180.0;
         vector<vector<double>> R = get_rotation_matrix(K, th);
         
-        double fR = 0;
+        double exact_ber_sum = 0;
         for (const auto& dv : valid_vectors) {
-            double P = 1.0;
-            // r = R * v を計算し、成分の2乗の積をとる
+            vector<double> G2(K, 0.0);
             for (int k = 0; k < K; ++k) {
                 double rk = 0;
                 for (int j = 0; j < K; ++j) {
                     rk += R[k][j] * dv.v[j];
                 }
-                P *= (rk * rk);
+                G2[k] = rk * rk;
             }
             
-            // ゼロ除算の回避（重なりペナルティ）
-            if (P < 1e-15) {
-                fR += 1e30; 
-            } else {
-                fR += dv.kappa / P;
+            // Craigの公式の数値積分（式48の特異点を回避した厳密な同値式）
+            int steps = 40;
+            double dphi = (M_PI / 2.0) / steps;
+            double integral = 0.0;
+            for (int i = 1; i <= steps; ++i) {
+                double phi = (i - 0.5) * dphi;
+                double sin2_phi = sin(phi) * sin(phi);
+                double prod = 1.0;
+                for (int k = 0; k < K; ++k) {
+                    prod *= sin2_phi / (sin2_phi + G2[k] / c_val);
+                }
+                integral += prod;
             }
+            double per = integral * dphi / M_PI;
+            exact_ber_sum += dv.kappa * per;
         }
         
-        double BER_bound = (fR >= 1e30) ? 1e30 : fR * scaling_factor;
+        // M^K で割って最終的なBER上界値とする（式45に基づく）
+        double BER_bound = exact_ber_sum / pow(M, K);
         
         out << fixed << setprecision(2) << deg << "," << scientific << setprecision(8) << BER_bound << "\n";
             
@@ -179,10 +187,9 @@ void run_simulation(int K, int M, string name) {
 
 int main() {
     // 任意のK次元を指定して実行
-    int K = 3; 
+    int K = 2; 
     
     run_simulation(K, 2, "BPSK");
-    run_simulation(K, 2, "4QAM");
     run_simulation(K, 4, "16QAM");
     run_simulation(K, 8, "64QAM");
     run_simulation(K, 16, "256QAM");
