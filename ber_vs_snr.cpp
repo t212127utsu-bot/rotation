@@ -109,7 +109,7 @@ void run_snr_simulation(int K, int M, string name, double opt_angle_deg) {
     vector<int> current_v(K, 0);
     build_vectors(0, K, M, N_vals, D_vals, current_v, valid_vectors);
     
-    string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\ber_eb\\SNR_vs_BER_K" + to_string(K) + "_" + name + ".csv";
+    string filepath = "C:\\Users\\Ide Nanako\\Desktop\\result3\\ber_eb\\SNR_vs_BER_K" + to_string(K) + "_" + name + "_20.7deg.csv";
     ofstream out(filepath);
     out << "SNR(dB),BER\n";
     
@@ -165,17 +165,10 @@ int main() {
     // 実行したいKをここで指定
     int K = 2;
     
-    // 以前導出した最適角をセット
+    // 従来良いとされていた20.7度での比較用シミュレーション
     if (K == 2) {
-        run_snr_simulation(K, 2, "BPSK", 27.37);
-        run_snr_simulation(K, 4, "16QAM", 21.01);
-        run_snr_simulation(K, 8, "64QAM", 15.69);
-        run_snr_simulation(K, 16, "256QAM", 15.47);
-    } else if (K == 3) {
-        run_snr_simulation(K, 2, "BPSK", 30.25);
-        run_snr_simulation(K, 4, "16QAM", 42.55);
-        run_snr_simulation(K, 8, "64QAM", 22.38);
-        run_snr_simulation(K, 16, "256QAM", 22.30);
+        run_snr_simulation(K, 8, "64QAM", 20.7);
+        run_snr_simulation(K, 16, "256QAM", 20.7);
     }
     
     return 0;
