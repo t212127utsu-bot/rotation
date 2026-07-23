@@ -168,11 +168,11 @@ int main() {
     
     // 比較用に厳密式で出したのと同じ角度の近似値を算出
     if (K == 2) {
-        // 真の最適角
+        // 真の最適角 (タイポ修正)
         run_snr_approx_simulation(K, 2, "BPSK", 27.37);
-        run_snr_approx_simulation(K, 4, "16QAM", 21.01);
-        run_snr_approx_simulation(K, 8, "64QAM", 15.69);
-        run_snr_approx_simulation(K, 16, "256QAM", 15.47);
+        run_snr_approx_simulation(K, 4, "16QAM", 21.06);
+        run_snr_approx_simulation(K, 8, "64QAM", 15.49);
+        run_snr_approx_simulation(K, 16, "256QAM", 15.48);
         
         // 従来良いとされていた20.7度
         run_snr_approx_simulation(K, 8, "64QAM", 20.7);
