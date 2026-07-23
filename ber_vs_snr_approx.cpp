@@ -146,7 +146,8 @@ void run_snr_approx_simulation(int K, int M, string name, double opt_angle_deg) 
             // 式(70)に基づく高SNR近似式の計算
             // 距離が0（Pが極小）になる特異点では近似式は発散するため除外処理
             if (P > 1e-15) {
-                double term = (1.0 / P) * pow(1.0 / c_val, K);
+                // 【修正】c_valはSNRの逆数に比例するため、乗算すべきは(c_val)^Kです
+                double term = (1.0 / P) * pow(c_val, K);
                 approx_ber_sum += dv.kappa * term * C_K;
             } else {
                 approx_ber_sum += 1e30; // 発散
